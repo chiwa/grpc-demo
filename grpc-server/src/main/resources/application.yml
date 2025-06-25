@@ -1,0 +1,7 @@
+# grpc-server/src/main/resources/application.yml
+server:
+  port: 8080  # สำหรับ Spring Boot HTTP (optional)
+
+grpc:
+  server:
+    port: 9090

@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+
+  grpc-server:
+    build:
+      context: ./grpc-server
+    container_name: grpc-server
+    ports:
+      - "9090:9090"
+    networks:
+      - grpc-net
+
+  grpc-client:
+    build:
+      context: ./grpc-client
+    container_name: grpc-client
+    depends_on:
+      - grpc-server
+    networks:
+      - grpc-net
+    # แนะนำให้ใส่ entrypoint ให้ client รันทันที
+    command: ["java", "-jar", "/app.jar"]
+
+networks:
+  grpc-net:
+    driver: bridge
+
+#docker compose down -v --remove-orphans;docker compose build --no-cache;docker compose up -d
