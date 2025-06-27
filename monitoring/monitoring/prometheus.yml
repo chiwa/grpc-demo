@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: 'grpc-server'
+    metrics_path: '/actuator/prometheus'  # ✅ จุดสำคัญ
+    dns_sd_configs:
+      - names: ['grpc-server']
+        type: 'A'
+        port: 8080

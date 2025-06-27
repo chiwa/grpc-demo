@@ -1,4 +1,4 @@
-package com.zencode.grpc;
+package com.zengcode.grpc;
 
 
 import com.zengcode.grpc.HelloRequest;

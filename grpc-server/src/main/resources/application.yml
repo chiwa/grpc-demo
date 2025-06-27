@@ -5,3 +5,15 @@ server:
 grpc:
   server:
     port: 9090
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: grpc-server

@@ -1,13 +1,10 @@
-version: '3.8'
-
 services:
 
   grpc-server:
     build:
       context: ./grpc-server
-    #container_name: grpc-server
-    #ports:
-      #- "9090:9090"
+    ports:
+      - "8080"  # เปิดเฉพาะภายใน ไม่ fix host port
     networks:
       - grpc-net
 
@@ -19,9 +16,28 @@ services:
       - grpc-server
     networks:
       - grpc-net
-    # แนะนำให้ใส่ entrypoint ให้ client รันทันที
     command: ["java", "-jar", "/app.jar"]
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9091:9090"
+    networks:
+      - grpc-net
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - grpc-net
 
 networks:
   grpc-net:
-    driver: bridge
+
+volumes:
+  grafana-data:
