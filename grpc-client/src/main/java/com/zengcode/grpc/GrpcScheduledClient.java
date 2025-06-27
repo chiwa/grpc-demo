@@ -29,7 +29,7 @@ public class GrpcScheduledClient {
         this.stub = HelloServiceGrpc.newBlockingStub(channel);
     }
 
-    @Scheduled(fixedRate = 5000)
+   // @Scheduled(fixedRate = 5000)
     public void callGrpc() {
         HelloRequest request = HelloRequest.newBuilder().setName("พี่พี").build();
         HelloResponse response = stub.sayHello(request);
