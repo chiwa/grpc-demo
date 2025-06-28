@@ -26,7 +26,7 @@ public class OrderStatusScheduler {
 
     }
 
-    @Scheduled(fixedRate = 30_000) // ทุก 30 วินาที
+    //@Scheduled(fixedRate = 30_000) // ทุก 30 วินาที
     public void sendBatchOrders() {
         stub = OrderStatusServiceGrpc.newBlockingStub(channel);
         Orderstatus.OrderStatusRequest request = Orderstatus.OrderStatusRequest.newBuilder().setOrderId("B001").build();

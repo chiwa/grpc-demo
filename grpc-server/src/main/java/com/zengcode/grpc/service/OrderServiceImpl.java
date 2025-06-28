@@ -9,7 +9,7 @@ import net.devh.boot.grpc.server.service.GrpcService;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
-@GrpcService
+//@GrpcService
 @Slf4j
 public class OrderServiceImpl extends OrderServiceGrpc.OrderServiceImplBase {
 

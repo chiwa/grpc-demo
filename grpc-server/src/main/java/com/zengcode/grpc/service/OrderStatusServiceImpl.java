@@ -9,7 +9,7 @@ import net.devh.boot.grpc.server.service.GrpcService;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@GrpcService
+//@GrpcService
 @Slf4j
 public class OrderStatusServiceImpl extends OrderStatusServiceGrpc.OrderStatusServiceImplBase {
     @Override
