@@ -2,13 +2,12 @@ package com.zengcode.grpc.service;
 
 import com.zengcode.grpc.chat.ChatMessage;
 import com.zengcode.grpc.chat.ChatServiceGrpc;
+import com.zengcode.grpc.session.ISessionManager;
 import io.grpc.stub.StreamObserver;
 import lombok.extern.slf4j.Slf4j;
 import net.devh.boot.grpc.server.service.GrpcService;
 
 import java.time.Instant;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -17,10 +16,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @GrpcService
 @Slf4j
 public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
-    private final Map<String, StreamObserver<ChatMessage>> connectedClients = new ConcurrentHashMap<>();
+    private final ISessionManager sessionManager;
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-    AtomicInteger counter = new AtomicInteger(1);
-    public ChatServiceImpl() {
+    private final AtomicInteger counter = new AtomicInteger(1);
+
+    public ChatServiceImpl(ISessionManager sessionManager) {
+        this.sessionManager = sessionManager;
+
         scheduler.scheduleAtFixedRate(() -> {
             ChatMessage broadcast = ChatMessage.newBuilder()
                     .setClientId("Server")
@@ -28,7 +30,9 @@ public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
                     .setTimestamp(Instant.now().toEpochMilli())
                     .setIsBroadcast(true)
                     .build();
-            broadcastToAllClients(broadcast);
+
+            log.info("📢 Broadcasting message to all clients: {}", broadcast.getContent());
+            sessionManager.broadcast(broadcast);
         }, 30, 30, TimeUnit.SECONDS);
     }
 
@@ -41,10 +45,11 @@ public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
             public void onNext(ChatMessage value) {
                 if (clientId == null) {
                     clientId = value.getClientId();
-                    connectedClients.put(clientId, responseObserver);
+                    sessionManager.addSession(clientId, responseObserver);
+                    log.info("✅ New client connected: {}", clientId);
                 }
 
-                log.info("[Server Received] {}: {}", value.getClientId(), value.getContent());
+                log.info("📥 [Server Received] {}: {}", value.getClientId(), value.getContent());
 
                 ChatMessage reply = ChatMessage.newBuilder()
                         .setClientId("Server")
@@ -53,28 +58,27 @@ public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
                         .build();
 
                 responseObserver.onNext(reply);
+                log.info("📤 [Server Replied] to {}: {}", clientId, reply.getContent());
             }
 
             @Override
             public void onError(Throwable t) {
-                if (clientId != null) connectedClients.remove(clientId);
+                log.warn("❌ [Error] Client {}: {}", clientId, t.getMessage());
+                if (clientId != null) {
+                    sessionManager.removeSession(clientId);
+                    log.info("👋 Session removed due to error: {}", clientId);
+                }
             }
 
             @Override
             public void onCompleted() {
-                if (clientId != null) connectedClients.remove(clientId);
+                log.info("🔚 [Completed] Client disconnected: {}", clientId);
+                if (clientId != null) {
+                    sessionManager.removeSession(clientId);
+                    log.info("🗑️ Session removed: {}", clientId);
+                }
                 responseObserver.onCompleted();
             }
         };
-    }
-
-    private void broadcastToAllClients(ChatMessage message) {
-        connectedClients.forEach((clientId, client) -> {
-            try {
-                client.onNext(message);
-            } catch (Exception e) {
-                connectedClients.remove(clientId);
-            }
-        });
     }
 }

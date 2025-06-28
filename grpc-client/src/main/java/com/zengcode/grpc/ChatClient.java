@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 
@@ -21,11 +22,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Slf4j
 public class ChatClient {
 
+    private final AtomicBoolean isClientBAlive = new AtomicBoolean(false);
+    private final AtomicBoolean isReconnectScheduled = new AtomicBoolean(false);
+    private final ScheduledExecutorService executor = Executors.newScheduledThreadPool(2);
     private final ManagedChannel channel;
+
     public ChatClient(@Value("${grpc.server.host}") String grpcHost,
-                                @Value("${grpc.server.port}") int grpcPort) {
+                      @Value("${grpc.server.port}") int grpcPort) {
         this.channel = ManagedChannelBuilder
-                .forAddress(grpcHost, grpcPort) // ✅ สำหรับ Docker ใช้ชื่อ service
+                .forAddress(grpcHost, grpcPort)
                 .usePlaintext()
                 .build();
     }
@@ -36,7 +41,7 @@ public class ChatClient {
         startClient("client-b");
     }
 
-    private  void startClient(String clientId) {
+    private void startClient(String clientId) {
         ChatServiceGrpc.ChatServiceStub stub = ChatServiceGrpc
                 .newStub(channel)
                 .withWaitForReady();
@@ -44,22 +49,30 @@ public class ChatClient {
         StreamObserver<ChatMessage> requestObserver = stub.chat(new StreamObserver<>() {
             @Override
             public void onNext(ChatMessage value) {
-                log.info("{} 💬{}", clientId, value.getContent());
+                log.info("{} 💬 {}", clientId, value.getContent());
             }
 
             @Override
             public void onError(Throwable t) {
-                log.info("{} ❌ Error: {}", clientId, t.getMessage());
+                log.warn("{} ❌ Error: {}", clientId, t.getMessage());
+                if (clientId.equals("client-b")) {
+                    isClientBAlive.set(false);
+                    scheduleReconnect();
+                }
             }
 
             @Override
             public void onCompleted() {
                 log.info("{} ✅ Chat ended", clientId);
+                if (clientId.equals("client-b")) {
+                    isClientBAlive.set(false);
+                    scheduleReconnect();
+                }
             }
         });
 
         AtomicInteger counter = new AtomicInteger(1);
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+
         executor.scheduleAtFixedRate(() -> {
             String content = "Hello from " + clientId + ", Message " + counter.getAndIncrement();
             ChatMessage message = ChatMessage.newBuilder()
@@ -68,6 +81,28 @@ public class ChatClient {
                     .setTimestamp(Instant.now().toEpochMilli())
                     .build();
             requestObserver.onNext(message);
+
+            if (clientId.equals("client-b") && counter.get() > 10) {
+                log.info("{} 🔚 Sent 10 messages, disconnecting...", clientId);
+                requestObserver.onCompleted();
+            }
+
         }, 0, 5, TimeUnit.SECONDS);
+
+        // mark client-b as alive
+        if (clientId.equals("client-b")) {
+            isClientBAlive.set(true);
+            isReconnectScheduled.set(false); // เคลียร์ flag
+        }
+    }
+
+    private void scheduleReconnect() {
+        if (isReconnectScheduled.compareAndSet(false, true)) {
+            log.info("⏳ Waiting 30 seconds before reconnecting client-b...");
+            executor.schedule(() -> {
+                log.info("🔁 Reconnecting client-b now...");
+                startClient("client-b");
+            }, 30, TimeUnit.SECONDS);
+        }
     }
 }
