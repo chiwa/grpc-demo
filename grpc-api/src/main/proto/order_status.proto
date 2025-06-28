@@ -1,0 +1,17 @@
+// order_status.proto
+syntax = "proto3";
+
+package com.zengcode.grpc.orderstatus;
+
+service OrderStatusService {
+  rpc getOrderStatus(OrderStatusRequest) returns (stream OrderStatusResponse);
+}
+
+message OrderStatusRequest {
+  string orderId = 1;
+}
+
+message OrderStatusResponse {
+  string status = 1;
+  string timestamp = 2;
+}

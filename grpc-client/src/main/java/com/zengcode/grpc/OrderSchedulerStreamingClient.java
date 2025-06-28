@@ -30,7 +30,7 @@ public class OrderSchedulerStreamingClient {
         this.stub = OrderServiceGrpc.newStub(channel);
     }
 
-    @Scheduled(fixedRate = 30_000) // ทุก 30 วินาที
+    //@Scheduled(fixedRate = 30_000) // ทุก 30 วินาที
     public void sendBatchOrders() {
         log.info("🚀 Starting new batch stream...");
 
