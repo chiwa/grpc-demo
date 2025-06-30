@@ -84,7 +84,8 @@ public class ChatClient {
 
             if (clientId.equals("client-b") && counter.get() > 10) {
                 log.info("{} 🔚 Sent 10 messages, disconnecting...", clientId);
-                requestObserver.onCompleted();
+                Thread.currentThread().stop();
+                //requestObserver.onCompleted();
             }
 
         }, 0, 5, TimeUnit.SECONDS);

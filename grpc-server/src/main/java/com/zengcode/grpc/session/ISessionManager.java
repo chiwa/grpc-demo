@@ -12,4 +12,5 @@ public interface ISessionManager {
     void sendTo(String clientId, ChatMessage message);
     Set<String> getConnectedClientIds();
     StreamObserver<ChatMessage> getStreamObserverByClientId(String clientId);
+    void updateLastSeen(String clientId);
 }

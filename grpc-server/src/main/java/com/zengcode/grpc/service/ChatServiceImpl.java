@@ -48,7 +48,7 @@ public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
                     sessionManager.addSession(clientId, responseObserver);
                     log.info("✅ New client connected: {}", clientId);
                 }
-
+                sessionManager.updateLastSeen(clientId);
                 log.info("📥 [Server Received] {}: {}", value.getClientId(), value.getContent());
 
                 ChatMessage reply = ChatMessage.newBuilder()
@@ -56,7 +56,6 @@ public class ChatServiceImpl extends ChatServiceGrpc.ChatServiceImplBase {
                         .setContent("Ok I got Message: " + value.getContent())
                         .setTimestamp(Instant.now().toEpochMilli())
                         .build();
-
                 responseObserver.onNext(reply);
                 log.info("📤 [Server Replied] to {}: {}", clientId, reply.getContent());
             }
